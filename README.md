@@ -13,7 +13,7 @@
 
 ## 项目结构
 
-my-blog/
+static-blog/
 ├── README.md # 项目说明
 ├── index.html # 主 HTML 文件
 ├── css/ # 样式文件夹
