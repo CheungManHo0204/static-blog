@@ -84,18 +84,68 @@ const ApiService = {
      */
     getMarkdownContent: async function(filePath) {
         try {
-            // 预留：未来可以替换为从服务器获取真实的Markdown文件
-            // const response = await fetch(`/articles/${filePath}`);
-            // return await response.text();
+            // 方案1：尝试从本地服务器读取（开发环境）
+            const localUrl = `./assets/articles/${filePath}`;
+            console.log('📄 尝试从本地读取:', localUrl);
             
-            // 模拟返回Markdown内容
-            return `# ${filePath} 的内容\n\n这是一个示例Markdown内容。在实际应用中，这里会是从服务器获取的真实Markdown文件内容。\n\n## 二级标题\n\n这是段落内容。\n\n### 代码示例\n\n\`\`\`javascript\nconsole.log("Hello, World!");\n\`\`\`\n\n## 列表示例\n\n- 列表项1\n- 列表项2\n- 列表项3\n\n> 这是一个引用块\n\n**粗体文本** 和 *斜体文本*`;
+            const response = await fetch(localUrl);
+            
+            if (response.ok) {
+                const markdown = await response.text();
+                console.log('✅ 成功读取本地文件，长度:', markdown.length);
+                return markdown;
+            }
+            
+            // 方案2：如果本地读取失败，尝试从GitHub读取（部署环境）
+            const githubRawUrl = `https://raw.githubusercontent.com/CheungManHo0204/static-blog/main/articles/${filePath}`;
+            console.log('尝试从GitHub读取:', githubRawUrl);
+            
+            const githubResponse = await fetch(githubRawUrl);
+            if (githubResponse.ok) {
+                const markdown = await githubResponse.text();
+                console.log('✅ 成功从GitHub读取');
+                return markdown;
+            }
+            
+            // 方案3：都失败时返回示例内容
+            console.warn('❌ 无法读取文件，使用示例内容');
+            return this.getFallbackContent(filePath);
+            
         } catch (error) {
-            console.error("获取Markdown内容失败:", error);
-            return `# 加载失败\n\n无法加载文章内容，请稍后重试。`;
+            console.error('获取Markdown内容失败:', error);
+            return this.getFallbackContent(filePath);
         }
+    },
+
+    // 添加回退内容函数
+    getFallbackContent: function(filePath) {
+        const filename = filePath.split('/').pop().replace('.md', '');
+        return `# ${filename}
+
+    > 这是一个示例内容，因为无法读取实际文件。
+
+    ## 为什么显示这个？
+
+    实际文件 \`${filePath}\` 无法被读取。可能的原因：
+
+    1. 文件不存在或路径错误
+    2. 服务器配置问题
+    3. CORS限制
+
+    ## 测试代码块
+
+    \`\`\`javascript
+    console.log("测试代码块");
+    \`\`\`
+
+    ## 测试列表
+    - 项目1
+    - 项目2
+    - 项目3
+
+    > 请检查控制台获取更多信息。`;
     }
-};
+    };
 
 // 导出API服务对象
 window.ApiService = ApiService;
