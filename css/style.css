@@ -1,7 +1,4 @@
-/* 
- * 极简博客网站 - 主样式文件
- * 导入所有CSS模块
- */
+/* css/style.css - 主样式文件 */
 
 /* 导入变量定义 */
 @import url('variables.css');
@@ -9,8 +6,30 @@
 /* 导入基础样式 */
 @import url('base.css');
 
-/* 导入布局样式 */
-@import url('layout.css');
-
 /* 导入组件样式 */
 @import url('components.css');
+
+/* Markdown内容样式调整 */
+.markdown-body {
+    background-color: transparent;
+    color: var(--color-text);
+    font-size: inherit;
+    line-height: inherit;
+}
+
+.markdown-body a {
+    border-bottom: 1px solid var(--color-border);
+}
+
+.markdown-body a:hover {
+    border-bottom-color: var(--color-link);
+}
+
+/* 文章内容中的代码块特殊处理 */
+.article-content pre {
+    margin: var(--space-5) 0;
+}
+
+.article-content blockquote {
+    margin: var(--space-5) 0;
+}

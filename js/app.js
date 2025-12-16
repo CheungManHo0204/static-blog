@@ -143,7 +143,7 @@ const BlogApp = {
         // 获取分类统计
         const categoryStats = await ApiService.getCategoryStats();
         
-        // 渲染首页
+        // 渲染首页（Write.as风格）
         this.renderHomePage(latestArticles, categoryStats);
         
         // 显示内容容器，隐藏文章容器
@@ -210,7 +210,7 @@ const BlogApp = {
     },
     
     /**
-     * 渲染首页
+     * 渲染首页（Write.as风格）
      * @param {Array} latestArticles - 最新文章列表
      * @param {Object} categoryStats - 分类统计
      */
@@ -221,44 +221,205 @@ const BlogApp = {
         // 创建首页容器
         const homeContainer = DOM.createElement("div", { className: "home-container" });
         
-        // 添加欢迎标题
+        // 添加欢迎区域
+        const welcomeSection = DOM.createElement("div", { className: "welcome-section" });
+        
         const welcomeTitle = DOM.createElement("h1", { 
             className: "welcome-title",
-            textContent: "欢迎来到我的博客"
+            textContent: "我的博客"
         });
-        homeContainer.appendChild(welcomeTitle);
         
-        // 添加描述
-        const description = DOM.createElement("p", {
+        const welcomeDescription = DOM.createElement("p", {
             className: "welcome-description",
-            textContent: "这里记录了我的技术学习和生活感悟。"
+            textContent: "记录技术与生活思考。简洁、专注、持续写作。"
         });
-        homeContainer.appendChild(description);
         
-        // 添加分类统计
-        const statsContainer = this.createCategoryStats(categoryStats);
-        homeContainer.appendChild(statsContainer);
+        welcomeSection.appendChild(welcomeTitle);
+        welcomeSection.appendChild(welcomeDescription);
+        homeContainer.appendChild(welcomeSection);
         
-        // 添加最新文章标题
-        const latestTitle = DOM.createElement("h2", {
+        // 添加分类链接（替代统计卡片）
+        const categoriesSection = this.createCategoryLinks(categoryStats);
+        if (categoriesSection) {
+            homeContainer.appendChild(categoriesSection);
+        }
+        
+        // 添加最新文章时间线
+        const latestSection = DOM.createElement("div", { className: "latest-articles" });
+        
+        const sectionTitle = DOM.createElement("h2", {
             className: "section-title",
             textContent: "最新文章"
         });
-        homeContainer.appendChild(latestTitle);
         
-        // 添加最新文章列表
+        latestSection.appendChild(sectionTitle);
+        
         if (latestArticles.length > 0) {
-            const articlesGrid = this.createArticlesGrid(latestArticles);
-            homeContainer.appendChild(articlesGrid);
+            // 创建文章时间线
+            const timeline = this.createArticlesTimeline(latestArticles);
+            latestSection.appendChild(timeline);
+            
+            // 如果文章数量达到显示上限，添加"查看全部"链接
+            if (latestArticles.length >= BlogConfig.DISPLAY.LATEST_ARTICLES_COUNT) {
+                const viewAllLink = DOM.createElement("a", {
+                    className: "view-all-link",
+                    href: "#",
+                    textContent: "查看所有文章",
+                    onclick: (e) => {
+                        e.preventDefault();
+                        // 这里可以链接到文章归档页面
+                        this.showCategoryPage(BlogConfig.ARTICLE_CATEGORIES.TECHNOLOGY);
+                    }
+                });
+                latestSection.appendChild(viewAllLink);
+            }
         } else {
             const noArticles = DOM.createElement("p", {
                 className: "no-articles",
                 textContent: "暂无文章"
             });
-            homeContainer.appendChild(noArticles);
+            latestSection.appendChild(noArticles);
         }
         
+        homeContainer.appendChild(latestSection);
         this.domElements.contentContainer.appendChild(homeContainer);
+    },
+    
+    /**
+     * 创建分类链接
+     * @param {Object} categoryStats - 分类统计
+     * @returns {HTMLElement} 分类链接容器
+     */
+    createCategoryLinks: function(categoryStats) {
+        const { DOM } = BlogUtils;
+        
+        if (!categoryStats || Object.keys(categoryStats).length === 0) {
+            return null;
+        }
+        
+        const container = DOM.createElement("div", { className: "home-categories" });
+        
+        Object.entries(categoryStats).forEach(([category, count]) => {
+            const categoryName = BlogManager.getCategoryName(category);
+            const categoryIcon = BlogManager.getCategoryIcon(category);
+            
+            const link = DOM.createElement("a", {
+                className: "home-category-link",
+                href: "#",
+                onclick: (e) => {
+                    e.preventDefault();
+                    this.showCategoryPage(category);
+                }
+            });
+            
+            link.innerHTML = `
+                <span class="home-category-icon">${categoryIcon}</span>
+                <span class="home-category-name">${categoryName}</span>
+                <span class="home-category-count">${count}</span>
+            `;
+            
+            container.appendChild(link);
+        });
+        
+        return container;
+    },
+    
+    /**
+     * 创建文章时间线
+     * @param {Array} articles - 文章列表
+     * @returns {HTMLElement} 时间线容器
+     */
+    createArticlesTimeline: function(articles) {
+        const { DOM } = BlogUtils;
+        const timeline = DOM.createElement("div", { className: "articles-timeline" });
+        
+        articles.forEach(article => {
+            const timelineItem = this.createTimelineItem(article);
+            timeline.appendChild(timelineItem);
+        });
+        
+        return timeline;
+    },
+    
+    /**
+     * 创建时间线项目
+     * @param {Object} article - 文章对象
+     * @returns {HTMLElement} 时间线项目
+     */
+    createTimelineItem: function(article) {
+        const { DOM, DateUtils, StringUtils } = BlogUtils;
+        
+        // 格式化日期
+        const date = new Date(article.date);
+        const month = date.toLocaleDateString("zh-CN", { month: "short" });
+        const day = date.getDate();
+        
+        // 计算阅读时间（假设500字/分钟）
+        const readTime = Math.ceil(article.content.length / 500);
+        
+        const timelineItem = DOM.createElement("div", { className: "article-timeline-item" });
+        
+        // 日期部分
+        const dateElement = DOM.createElement("div", { className: "article-date" });
+        dateElement.innerHTML = `
+            <span class="article-date-month">${month}</span>
+            <span class="article-date-day">${day}</span>
+        `;
+        
+        // 内容部分
+        const contentElement = DOM.createElement("div", { className: "article-content-summary" });
+        
+        // 标题
+        const titleLink = DOM.createElement("a", {
+            className: "article-content-title",
+            href: "#",
+            textContent: article.title,
+            onclick: (e) => {
+                e.preventDefault();
+                this.showArticlePage(article.id);
+            }
+        });
+        
+        // 摘要
+        const excerpt = DOM.createElement("p", {
+            className: "article-content-excerpt",
+            textContent: StringUtils.extractSummaryFromMarkdown(
+                article.content, 
+                BlogConfig.DISPLAY.SUMMARY_LENGTH
+            )
+        });
+        
+        // 元数据
+        const metaElement = DOM.createElement("div", { className: "article-meta-minimal" });
+        const categoryName = BlogManager.getCategoryName(article.category);
+        
+        metaElement.innerHTML = `
+            <span class="article-category-tag">${categoryName}</span>
+            <span class="article-read-time">${readTime} 分钟阅读</span>
+        `;
+        
+        // 阅读更多链接
+        const readMore = DOM.createElement("a", {
+            className: "article-read-more",
+            href: "#",
+            textContent: "阅读全文",
+            onclick: (e) => {
+                e.preventDefault();
+                this.showArticlePage(article.id);
+            }
+        });
+        
+        // 组装内容
+        contentElement.appendChild(titleLink);
+        contentElement.appendChild(excerpt);
+        contentElement.appendChild(metaElement);
+        contentElement.appendChild(readMore);
+        
+        // 组装时间线项目
+        timelineItem.appendChild(dateElement);
+        timelineItem.appendChild(contentElement);
+        
+        return timelineItem;
     },
     
     /**
@@ -318,60 +479,14 @@ const BlogApp = {
         // 设置文章元数据
         const categoryName = BlogManager.getCategoryName(article.category);
         const formattedDate = BlogUtils.DateUtils.formatDate(article.date);
-        const relativeDate = BlogUtils.DateUtils.getRelativeTime(article.date);
         
         this.domElements.articleMeta.innerHTML = `
             <span class="article-category">${categoryName}</span>
-            <span class="article-date">${formattedDate} (${relativeDate})</span>
+            <span class="article-date">${formattedDate}</span>
         `;
         
         // 渲染Markdown内容
         this.domElements.articleContent.innerHTML = marked.parse(markdownContent);
-    },
-    
-    /**
-     * 创建分类统计组件
-     * @param {Object} categoryStats - 分类统计对象
-     * @returns {HTMLElement} 分类统计容器
-     */
-    createCategoryStats: function(categoryStats) {
-        const { DOM } = BlogUtils;
-        const statsContainer = DOM.createElement("div", { className: "category-stats" });
-        
-        // 统计标题
-        const statsTitle = DOM.createElement("h3", {
-            className: "stats-title",
-            textContent: "文章分类统计"
-        });
-        statsContainer.appendChild(statsTitle);
-        
-        // 统计项容器
-        const statsItems = DOM.createElement("div", { className: "stats-items" });
-        
-        // 遍历分类统计
-        Object.entries(categoryStats).forEach(([category, count]) => {
-            const categoryName = BlogManager.getCategoryName(category);
-            const categoryIcon = BlogManager.getCategoryIcon(category);
-            
-            const statItem = DOM.createElement("div", { className: "stat-item" });
-            statItem.innerHTML = `
-                <div class="stat-icon">${categoryIcon}</div>
-                <div class="stat-info">
-                    <div class="stat-name">${categoryName}</div>
-                    <div class="stat-count">${count} 篇</div>
-                </div>
-            `;
-            
-            // 添加点击事件，跳转到分类页面
-            statItem.addEventListener("click", () => {
-                this.showCategoryPage(category);
-            });
-            
-            statsItems.appendChild(statItem);
-        });
-        
-        statsContainer.appendChild(statsItems);
-        return statsContainer;
     },
     
     /**
